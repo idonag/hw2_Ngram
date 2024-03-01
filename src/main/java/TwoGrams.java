@@ -1,7 +1,4 @@
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -18,7 +15,7 @@ public class TwoGrams {
 
 
     //Writable class that represent each key of bigram - decade
-    public static class BigramPerDecade implements Writable{
+    public static class BigramPerDecade implements WritableComparable {
         private String bigram;
         private int decade;
 
@@ -32,13 +29,13 @@ public class TwoGrams {
         }
         @Override
         public void readFields(DataInput dataInput) throws IOException {
-            bigram = dataInput.readLine();
+            bigram = dataInput.readUTF();
             decade = dataInput.readInt();
         }
 
         @Override
         public void write(DataOutput dataOutput) throws IOException {
-            dataOutput.writeBytes(bigram);
+            dataOutput.writeUTF(bigram);
             dataOutput.writeInt(decade);
         }
 
@@ -49,6 +46,20 @@ public class TwoGrams {
 
         public void setBigram(Text bigram) {
             this.bigram = bigram.toString();
+        }
+
+        @Override
+        public int compareTo(Object other) {
+            if(!(other instanceof BigramPerDecade))
+                return 1;
+            BigramPerDecade otherBigram = (BigramPerDecade)other;
+            // First, compare by decade
+            int decadeComparison = Integer.compare(this.decade, otherBigram.decade);
+            if (decadeComparison != 0) {
+                return decadeComparison;
+            }
+            // If decades are equal, compare by bigram
+            return this.bigram.compareTo(otherBigram.bigram);
         }
     }
 
@@ -107,7 +118,7 @@ public class TwoGrams {
         System.out.println("[DEBUG] STEP 1 started!");
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "Word Count");
+        Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(TwoGrams.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
@@ -124,8 +135,8 @@ public class TwoGrams {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://bucket163897429777/arbix.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://bucket163897429777/output_word_count"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/2gram_short.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 

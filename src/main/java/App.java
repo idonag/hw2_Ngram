@@ -37,7 +37,7 @@ public class App {
 
         // Step 1
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
-                .withJar("s3://bucket163897429777/jars/WordCount.jar");
+                .withJar("s3://dsp-2gram/2gram.jar");
 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -59,7 +59,7 @@ public class App {
                 .withName("Map reduce project")
                 .withInstances(instances)
                 .withSteps(stepConfig1)
-                .withLogUri("s3://bucket163897429777/logs/")
+                .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
                 .withReleaseLabel("emr-5.11.0");
