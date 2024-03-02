@@ -9,6 +9,9 @@ import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduce;
 import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClientBuilder;
 import com.amazonaws.services.elasticmapreduce.model.*;
 
+import java.util.LinkedList;
+import java.util.List;
+
 
 public class App {
     public static AWSCredentialsProvider credentialsProvider;
@@ -53,6 +56,15 @@ public class App {
                 .withHadoopJarStep(step1)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
 
+        //step2
+        HadoopJarStepConfig step2 = new HadoopJarStepConfig()
+                .withJar("s3://dsp-2gram/Step2.jar");
+
+        StepConfig stepConfig2 = new StepConfig()
+                .withName("Step2")
+                .withHadoopJarStep(step1)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
+
         //Job flow
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
                 .withInstanceCount(numberOfInstances)
@@ -67,7 +79,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1)
+                .withSteps(stepConfig1,stepConfig2)
                 .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
