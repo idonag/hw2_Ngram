@@ -139,6 +139,7 @@ public class TwoGrams {
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
 
+
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
 //        job.setOutputFormatClass(TextOutputFormat.class);
