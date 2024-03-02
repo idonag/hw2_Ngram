@@ -64,15 +64,16 @@ public class Step2 {
             else{
                 for (Text value : values) {
                     String[] valueSplit = value.toString().split("\\s+");
-                    context.write( new Text(keys[0] + " " + valueSplit[0] + " " + keys[1]),  new IntWritable(Integer.parseInt(valueSplit[1]) - count.get()));
+                    context.write(new Text(keys[0] + " " + valueSplit[0] + " " + keys[1]),
+                            new IntWritable(Integer.parseInt(valueSplit[1]) - count.get()));
                 }
             }
         }
     }
 
-    public static class PartitionerClass extends Partitioner<Text, IntWritable> {
+    public static class PartitionerClass extends Partitioner<Text, Text> {
         @Override
-        public int getPartition(Text key, IntWritable value, int numPartitions) {
+        public int getPartition(Text key, Text value, int numPartitions) {
             String[] words = key.toString().split("\\s+");
             return ((words[0]+ " " +words[1]).hashCode()) % numPartitions; //hello word 1990 -> 0 hello 1990
         }
@@ -89,7 +90,7 @@ public class Step2 {
         job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(IntWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
 
