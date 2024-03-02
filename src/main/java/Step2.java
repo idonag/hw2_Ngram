@@ -14,48 +14,67 @@ import java.util.StringTokenizer;
 
 
 public class Step2 {
-    public static class MapperClass extends Mapper<LongWritable, Text, Text, IntWritable> {
+    public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         Text new_key = new Text();
-        IntWritable count = new IntWritable();
+        Text count = new Text();
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
-            String[] words = value.toString().split(" ");
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < words.length; i++) {
-                builder.append(words[i]);
-                if (i < words.length - 1) {
-                    builder.append(" ");
+            StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
+            while (lineItr.hasMoreTokens()) {
+                String[] words = lineItr.nextToken().split("\\s+");
+                if(words[0].equals("0")){
+                    context.write(new Text(words[1] + " " + words[2]),new Text(words[3]));
+                }
+                else if(!words[0].equals("1")){
+                    context.write(new Text(words[0] + " " + words[2] + " " + "b"),new Text(words[1] + " " + words[3]));
+                }
+                else{
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 0; i < words.length - 1; i++) {
+                        builder.append(words[i]);
+                        if (i < words.length - 2) {
+                            builder.append(" ");
+                        }
+                    }
+                    new_key.set(builder.toString());
+                    count.set(words[words.length - 1]);
+                    context.write(new_key, count);
                 }
             }
-            new_key.set(builder.toString());
-            count.set(Integer.parseInt(words[words.length-1]));
-            context.write(new_key,count);
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,IntWritable,Text,IntWritable> {
+    public static class ReducerClass extends Reducer<Text,Text,Text,IntWritable> {
         /*
         hello word 1990 4
         0 hello 1990 12
         1 word 1990 6
          */
+
+        IntWritable count = new IntWritable();
         @Override
-        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException,  InterruptedException {
-            int sum = 0;
-            for (IntWritable value : values) {
-                sum += value.get();
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+            String[] keys = key.toString().split("\\s+");
+            if(keys.length == 2){
+                count.set(Integer.parseInt(values.iterator().next().toString()));
             }
-            context.write(key, new IntWritable(sum));
+            else if(keys[0].equals("1")){
+                context.write(key,new IntWritable(Integer.parseInt(values.iterator().next().toString())));
+            }
+            else{
+                for (Text value : values) {
+                    String[] valueSplit = value.toString().split("\\s+");
+                    context.write( new Text(keys[0] + " " + valueSplit[0] + " " + keys[1]),  new IntWritable(Integer.parseInt(valueSplit[1]) - count.get()));
+                }
+            }
         }
     }
 
     public static class PartitionerClass extends Partitioner<Text, IntWritable> {
         @Override
         public int getPartition(Text key, IntWritable value, int numPartitions) {
-            if(!(key.toString().startsWith("0") || key.toString().startsWith("1"))){
-                return (("0 " + key.toString().split(" ")[0]+ " " +key.toString().split(" ")[2]).hashCode()) % numPartitions; //hello word 1990 -> 0 hello 1990
-            }
-            return key.hashCode() % numPartitions; // 0 hello 1990
+            String[] words = key.toString().split("\\s+");
+            return ((words[0]+ " " +words[1]).hashCode()) % numPartitions; //hello word 1990 -> 0 hello 1990
         }
     }
 
@@ -64,7 +83,7 @@ public class Step2 {
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "2gram count");
-        job.setJarByClass(TwoGrams.class);
+        job.setJarByClass(Step2.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
         job.setCombinerClass(ReducerClass.class);
