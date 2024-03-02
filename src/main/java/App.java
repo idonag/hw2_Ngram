@@ -17,7 +17,16 @@ public class App {
     public static AmazonElasticMapReduce emr;
 
     public static int numberOfInstances = 1;
+    private static double minPmi;
+    private static double relMinPmi;
+
     public static void main(String[]args){
+//        if(args.length != 2){
+//            throw new IllegalArgumentException("two arguments required");
+//        }
+//        minPmi = Double.parseDouble(args[0]);
+//        relMinPmi = Double.parseDouble(args[0]);
+
         credentialsProvider = new ProfileCredentialsProvider();
         System.out.println("[INFO] Connecting to aws");
         ec2 = AmazonEC2ClientBuilder.standard()

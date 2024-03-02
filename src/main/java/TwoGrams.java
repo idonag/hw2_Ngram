@@ -6,6 +6,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.StringTokenizer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -63,10 +64,13 @@ public class TwoGrams {
         }
     }
 
-    public static class MapperClass extends Mapper<LongWritable, Text, BigramPerDecade, IntWritable> {
+    public static class MapperClass extends Mapper<LongWritable, Text, Text, IntWritable> {
         private final static IntWritable count = new IntWritable();
-        private final static IntWritable year = new IntWritable();
+        private final static IntWritable decade = new IntWritable();
         private Text bigram = new Text();
+        private Text bigramKey = new Text();
+        private Text w1Key = new Text();
+        private Text w2Key = new Text();
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
@@ -74,13 +78,13 @@ public class TwoGrams {
             while (lineItr.hasMoreTokens()) {
                 StringTokenizer itr = new StringTokenizer(lineItr.nextToken(), "\t");
                 int i = 0;
-                while (itr.hasMoreTokens()) {
+                while (itr.hasMoreTokens() && i < 3) {
                     switch (i) {
                         case 0:
                             bigram.set(itr.nextToken());
                             break;
                         case 1:
-                            year.set(Integer.parseInt(itr.nextToken()));
+                            decade.set((Integer.parseInt(itr.nextToken()) /10) * 10);
                             break;
                         case 2:
                             count.set(Integer.parseInt(itr.nextToken()));
@@ -88,17 +92,23 @@ public class TwoGrams {
                     }
                     i++;
                 }
-                BigramPerDecade bpy = new BigramPerDecade();
-                bpy.setYear(year);
-                bpy.setBigram(bigram);
-                context.write(bpy, count);
+//                BigramPerDecade bpy = new BigramPerDecade();
+//                bpy.setYear(year);
+//                bpy.setBigram(bigram);
+                bigramKey.set(bigram.toString() + ' ' + decade);
+                context.write(bigramKey, count);
+                String[] words = bigram.toString().split(" ");
+                w1Key.set("0 " + words[0] + " " + decade);
+                w2Key.set("1 " + words[1] + " " + decade);
+                context.write(w1Key,count);
+                context.write(w2Key,count);
             }
         }
     }
 
-    public static class ReducerClass extends Reducer<BigramPerDecade,IntWritable,BigramPerDecade,IntWritable> {
+    public static class ReducerClass extends Reducer<Text,IntWritable,Text,IntWritable> {
         @Override
-        public void reduce(BigramPerDecade key, Iterable<IntWritable> values, Context context) throws IOException,  InterruptedException {
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException,  InterruptedException {
             int sum = 0;
             for (IntWritable value : values) {
                 sum += value.get();
@@ -107,9 +117,9 @@ public class TwoGrams {
         }
     }
 
-    public static class PartitionerClass extends Partitioner<BigramPerDecade, IntWritable> {
+    public static class PartitionerClass extends Partitioner<Text, IntWritable> {
         @Override
-        public int getPartition(BigramPerDecade key, IntWritable value, int numPartitions) {
+        public int getPartition(Text key, IntWritable value, int numPartitions) {
             return key.hashCode() % numPartitions;
         }
     }
@@ -124,9 +134,9 @@ public class TwoGrams {
         job.setPartitionerClass(PartitionerClass.class);
         job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
-        job.setMapOutputKeyClass(BigramPerDecade.class);
+        job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
-        job.setOutputKeyClass(BigramPerDecade.class);
+        job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
 
 //        For n_grams S3 files.
