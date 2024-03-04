@@ -23,17 +23,17 @@ public class Step2 {
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
                 //If words is a bi-gram, send it with the correct format: {(w1,decade,'b'):(w2,count)}
-                if(!words[0].equals("1") && words.length > 2){
+                if(!words[0].equals("1") && !words[0].equals("0") && words.length > 2){
                     //words = [w1,w2,decade,count]
                     context.write(new Text(words[0] + " " + words[2] + " " + "b"),new Text(words[1] + " " + words[3]));
                 }
                 //If it's a first word representation, send it with the correct format: {(w1,decade) : count}
-                if(words[0].equals("0")){
+                else if(words[0].equals("0")){
                      //words = ['0',w1,decade,count]
                     context.write(new Text(words[1] + " " + words[2]),new Text(words[3]));
                 }
                 //If it's a second word representation or a decade count, remain unchanged.
-                else if(words[0].equals("1")){
+                else{
                     StringBuilder builder = new StringBuilder();
                     for (int i = 0; i < words.length - 1; i++) {
                         builder.append(words[i]);
@@ -49,7 +49,7 @@ public class Step2 {
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,Text,Text,DoubleWritable> {
+    public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
         DoubleWritable w1_count = new DoubleWritable();
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
@@ -59,21 +59,21 @@ public class Step2 {
                 w1_count.set(Double.parseDouble(values.iterator().next().toString()));
             }
             //Bi-gram case: calculate and subtract the appropriate values
-            if(keys.length == 3 && !keys[0].equals("1")){
+            else if(keys.length == 3 && !keys[0].equals("1")){
                 for (Text value : values) {
 //                  arrays keys and valueSplit will contain:
 //                  keys=[w1,decade,'b']
 //                  valueSplit=[w2,count]
 //                  where the original bi-gram is 'w1 w2' and of amount count.
                     String[] valueSplit = value.toString().split("\\s+");
-                    context.write(new Text(keys[0] + " " + valueSplit[0]+ " " + keys[1] + " " ),
-                            new DoubleWritable(Double.parseDouble(valueSplit[1])));
+                    context.write(new Text(keys[0] + " " + valueSplit[0]+ " " + keys[1]),
+                            new Text(String.valueOf(Double.parseDouble(valueSplit[1]) - w1_count.get())));
 //                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2))-log(c(w1)))}
                 }
             }
             //If we encounter a second word count row, or a decade count row, remain unchanged.
             else{
-                context.write(key,new DoubleWritable(Double.parseDouble(values.iterator().next().toString())));
+                context.write(key,values.iterator().next());
             }
 
         }
@@ -106,7 +106,7 @@ public class Step2 {
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
@@ -114,8 +114,8 @@ public class Step2 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step2_2gram_count.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 

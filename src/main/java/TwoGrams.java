@@ -14,7 +14,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.fs.Path;
 public class TwoGrams {
 
-    public static class MapperClass extends Mapper<LongWritable, Text, Text, IntWritable> {
+    public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         private final static IntWritable count = new IntWritable();
         private final static IntWritable decade = new IntWritable();
         private Text bigram = new Text();
@@ -42,27 +42,28 @@ public class TwoGrams {
                     }
                     i++;
                 }
-                bigramKey.set(bigram.toString() + ' ' + decade);
-                context.write(bigramKey, count);
+                bigramKey.set(bigram.toString() + " " + decade.get());
+                context.write(bigramKey, new Text(count.toString()));
                 String[] words = bigram.toString().split(" ");
                 w1Key.set("0 " + words[0] + " " + decade);
                 w2Key.set("1 " + words[1] + " " + decade);
-                context.write(w1Key,count);
-                context.write(w2Key,count);
-                context.write(new Text(String.valueOf(decade.get())),count);
+                context.write(w1Key,new Text(count.toString()));
+                context.write(w2Key,new Text(count.toString()));
+                context.write(new Text(String.valueOf(decade.get())),new Text(count.toString()));
             }
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,IntWritable,Text,DoubleWritable> {
+    public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
         @Override
-        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException,  InterruptedException {
-            String[] keys = key.toString().split("\\s+");
-            int sum = 0;
-            for (IntWritable value : values) {
-                sum += value.get();
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+            double sum = 0;
+            for (Text value : values) {
+                sum += Double.parseDouble(value.toString());
             }
-            context.write(key, new DoubleWritable(Math.log(sum)));
+            System.out.println("key: "+key.toString()+"sum: "+sum);
+            double log_sum = Math.log(sum);
+            context.write(key, new Text(String.valueOf(sum)));
         }
     }
 
@@ -84,9 +85,10 @@ public class TwoGrams {
         job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(IntWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
+        System.out.println("job configured!");
 
 
 //        For n_grams S3 files.
@@ -95,8 +97,8 @@ public class TwoGrams {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/2gram_short.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_2gram_count.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/2gram_short.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 

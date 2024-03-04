@@ -38,7 +38,7 @@ public class Step3 {
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,Text,Text,DoubleWritable> {
+    public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
         DoubleWritable w2_count = new DoubleWritable();
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
@@ -58,7 +58,7 @@ public class Step3 {
 //                  where the original bi-gram is 'w1 w2' and of amount count.
 
                     context.write(new Text(valueSplit[0] + " " + keys[0] + " " + keys[1]),
-                            new DoubleWritable(Double.parseDouble(valueSplit[1]) - w2_count.get()));
+                            new Text(String.valueOf(Double.parseDouble(valueSplit[1]) - w2_count.get())));
 
 //                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2))-log(c(w1))-log(c(w2)))}
                 }
@@ -66,7 +66,7 @@ public class Step3 {
             //Decade case, remain the same
             else{
                 context.write(new Text(keys[0]),
-                        new DoubleWritable(Double.parseDouble(values.iterator().next().toString())));
+                        values.iterator().next());
             }
         }
     }
@@ -84,7 +84,7 @@ public class Step3 {
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
@@ -92,8 +92,8 @@ public class Step3 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 ///TODO change the file path for input and output!!!!!!!!!!
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_step2_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step3_2gram_count.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step3_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
