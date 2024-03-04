@@ -14,56 +14,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.fs.Path;
 public class TwoGrams {
 
-
-    //Writable class that represent each key of bigram - decade
-    public static class BigramPerDecade implements WritableComparable {
-        private String bigram;
-        private int decade;
-
-        public BigramPerDecade(){
-
-        }
-
-        public BigramPerDecade(Text bigram, IntWritable year){
-            setBigram(bigram);
-            setYear(year);
-        }
-        @Override
-        public void readFields(DataInput dataInput) throws IOException {
-            bigram = dataInput.readUTF();
-            decade = dataInput.readInt();
-        }
-
-        @Override
-        public void write(DataOutput dataOutput) throws IOException {
-            dataOutput.writeUTF(bigram);
-            dataOutput.writeInt(decade);
-        }
-
-        public void setYear(IntWritable year) {
-            //Calculate the decade of -year-
-            this.decade = (year.get()/10) * 10;
-        }
-
-        public void setBigram(Text bigram) {
-            this.bigram = bigram.toString();
-        }
-
-        @Override
-        public int compareTo(Object other) {
-            if(!(other instanceof BigramPerDecade))
-                return 1;
-            BigramPerDecade otherBigram = (BigramPerDecade)other;
-            // First, compare by decade
-            int decadeComparison = Integer.compare(this.decade, otherBigram.decade);
-            if (decadeComparison != 0) {
-                return decadeComparison;
-            }
-            // If decades are equal, compare by bigram
-            return this.bigram.compareTo(otherBigram.bigram);
-        }
-    }
-
     public static class MapperClass extends Mapper<LongWritable, Text, Text, IntWritable> {
         private final static IntWritable count = new IntWritable();
         private final static IntWritable decade = new IntWritable();
@@ -92,9 +42,6 @@ public class TwoGrams {
                     }
                     i++;
                 }
-//                BigramPerDecade bpy = new BigramPerDecade();
-//                bpy.setYear(year);
-//                bpy.setBigram(bigram);
                 bigramKey.set(bigram.toString() + ' ' + decade);
                 context.write(bigramKey, count);
                 String[] words = bigram.toString().split(" ");
@@ -102,18 +49,20 @@ public class TwoGrams {
                 w2Key.set("1 " + words[1] + " " + decade);
                 context.write(w1Key,count);
                 context.write(w2Key,count);
+                context.write(new Text(String.valueOf(decade.get())),count);
             }
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,IntWritable,Text,IntWritable> {
+    public static class ReducerClass extends Reducer<Text,IntWritable,Text,DoubleWritable> {
         @Override
         public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException,  InterruptedException {
+            String[] keys = key.toString().split("\\s+");
             int sum = 0;
             for (IntWritable value : values) {
                 sum += value.get();
             }
-            context.write(key, new IntWritable(sum));
+            context.write(key, new DoubleWritable(Math.log(sum)));
         }
     }
 

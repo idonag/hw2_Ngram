@@ -61,6 +61,22 @@ public class App {
                 .withName("Step2")
                 .withHadoopJarStep(step2)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
+        //step3
+        HadoopJarStepConfig step3 = new HadoopJarStepConfig()
+                .withJar("s3://dsp-2gram/step3.jar");
+
+        StepConfig stepConfig3 = new StepConfig()
+                .withName("Step3")
+                .withHadoopJarStep(step2)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
+        //step4
+        HadoopJarStepConfig step4 = new HadoopJarStepConfig()
+                .withJar("s3://dsp-2gram/step4.jar");
+
+        StepConfig stepConfig4 = new StepConfig()
+                .withName("Step4")
+                .withHadoopJarStep(step2)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
 
         //Job flow
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
@@ -76,7 +92,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1,stepConfig2)
+                .withSteps(stepConfig1,stepConfig2,stepConfig3,stepConfig4)
                 .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
