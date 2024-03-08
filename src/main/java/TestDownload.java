@@ -11,9 +11,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Partitioner;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -23,7 +20,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.fs.Path;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import com.amazonaws.auth.AWSCredentialsProvider;
 public class TestDownload {
     public static String getObjectFromBucket(String bucketName, String keyName) throws IOException {
