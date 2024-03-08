@@ -10,6 +10,9 @@ import com.amazonaws.services.elasticmapreduce.AmazonElasticMapReduceClientBuild
 import com.amazonaws.services.elasticmapreduce.model.*;
 
 import javax.xml.bind.annotation.XmlType;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 
 public class App {
@@ -74,6 +77,8 @@ public class App {
         //step4
         HadoopJarStepConfig step4 = new HadoopJarStepConfig()
                 .withJar("s3://dsp-2gram2/step4.jar");
+        List<String> step4_args = Arrays.asList(args[1], args[2]);
+        step4.setArgs(step4_args);
 
         StepConfig stepConfig4 = new StepConfig()
                 .withName("Step4")
@@ -94,7 +99,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1,stepConfig2,stepConfig3/*,stepConfig4*/)
+                .withSteps(stepConfig1,stepConfig2,stepConfig3,stepConfig4)
                 .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")

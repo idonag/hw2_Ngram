@@ -58,17 +58,20 @@ public class Step4 {
                     String[] valueSplit = value.toString().split("\\s+");
                     double almostPmi = Double.parseDouble(valueSplit[0]);
                     double cw1w2 = Double.parseDouble(valueSplit[1]);
-                    double newValue = calculateNpmi(decade_count.get(),cw1w2,almostPmi);
-                    if(isCollocation(newValue)){
-                        context.write(key,new Text(String.valueOf(newValue)));
+                    double npmi = calculateNpmi(decade_count.get(),cw1w2,almostPmi);
+                    Text newKey = new Text(keys[0] + " " + npmi + " " + keys[1] + " " + keys[2]);
+                    if(isCollocation(npmi,context)){
+                        context.write(newKey,new Text(""));
                     }
                 }
+                //{dec,npmi,w1,w2}:""
             }
         }
 
-        private boolean isCollocation(double newValue) {
-            return false;
-            ///TODO not implemented yet
+        private boolean isCollocation(double npmi,Context context) {
+            double min_pmi = Double.parseDouble(context.getConfiguration().get("min_pmi","1"));
+            double rel_min_pmi = Double.parseDouble(context.getConfiguration().get("rel_min_pmi","1"));
+            return npmi >= Math.max(min_pmi,rel_min_pmi);
         }
 
         private double calculateNpmi(double N, double countW1W2,double almostPmi){
@@ -93,6 +96,8 @@ public class Step4 {
         System.out.println("[DEBUG] STEP 4 started!");
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
+        conf.set("min_pmi",args[0]);
+        conf.set("rel_min_pmi",args[1]);
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step4.class);
         job.setMapperClass(MapperClass.class);
