@@ -17,21 +17,22 @@ public class Step4 {
     public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         Text new_key = new Text();
         Text count = new Text();
+
+        //{w1,w2,dec}:log(c(w1w2))-log(c(w1))-log(c(w2)) -----> {dec,w1,w2}:{npmi}
+        //decade:N -----> NULL
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
 
-                //If words is a bi-gram, send it with the correct format: {(decade w1 w2):count}
+                //If words is a bi-gram, send it with the correct format: {(decade w1 w2):log(count),count}
                 if(words.length>2){
-
-                    //words = [w1,w2,decade,count]
-                    context.write(new Text(words[2] + " " + words[0] + " " + words[1]),new Text(words[0] + " " + words[1]+ " "+ words[3]));
+                    //words = [w1,w2,decade,log(count),count]
+                    context.write(new Text(words[2] + " " + words[0] + " " + words[1]),new Text(words[3] + " " + words[4]));
                 }
                 //If it's a decade count, remain the same {decade:count}
                 else{
-
                     //words = [decade,count]
                     context.write(new Text(words[0]),new Text(words[1]));
                 }
@@ -40,6 +41,7 @@ public class Step4 {
     }
 
     public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
+
         DoubleWritable decade_count = new DoubleWritable();
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
@@ -49,17 +51,31 @@ public class Step4 {
                 decade_count.set(Double.parseDouble(values.iterator().next().toString()));
             }
             //Bi-gram case: calculate and subtract the appropriate values
-            if(keys.length == 3 && !keys[0].equals("1")){
-                for (Text value : values) {
-//                  arrays keys and valueSplit will contain:
-//                  keys=[decade,w1,w2]
-//                  value=count
-//                  where the original bi-gram is 'w1 w2' and of amount count.
-                    context.write(new Text(keys[1] + " " + keys[2] + " " + keys[0]),
-                            new Text(String.valueOf(Double.parseDouble(value.toString()) + decade_count.get())));
-//                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2))-log(c(w1))-log(c(w2))+log(N)}
+            else {
+                //keys = {dec,w1,w2}
+                //value = {log(count),count}
+                for(Text value : values){
+                    String[] valueSplit = value.toString().split("\\s+");
+                    double almostPmi = Double.parseDouble(valueSplit[0]);
+                    double cw1w2 = Double.parseDouble(valueSplit[1]);
+                    double newValue = calculateNpmi(decade_count.get(),cw1w2,almostPmi);
+                    if(isCollocation(newValue)){
+                        context.write(key,new Text(String.valueOf(newValue)));
+                    }
                 }
             }
+        }
+
+        private boolean isCollocation(double newValue) {
+            return false;
+            ///TODO not implemented yet
+        }
+
+        private double calculateNpmi(double N, double countW1W2,double almostPmi){
+            double pmi = almostPmi + Math.log(N);
+            double pw1w2 = countW1W2/N;
+            double denom = -Math.log(pw1w2);
+            return pmi/denom;
         }
     }
 
@@ -81,7 +97,6 @@ public class Step4 {
         job.setJarByClass(Step4.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
-        job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);

@@ -17,23 +17,24 @@ public class Step2 {
     public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         Text new_key = new Text();
         Text count = new Text();
+
         @Override
-        public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
                 //If words is a bi-gram, send it with the correct format: {(w1,decade,'b'):(w2,count)}
-                if(!words[0].equals("1") && !words[0].equals("0") && words.length > 2){
+                if (!words[0].equals("1") && !words[0].equals("0") && words.length > 2) {
                     //words = [w1,w2,decade,count]
-                    context.write(new Text(words[0] + " " + words[2] + " " + "b"),new Text(words[1] + " " + words[3]));
+                    context.write(new Text(words[0] + " " + words[2] + " " + "b"), new Text(words[1] + " " + words[3]));
                 }
                 //If it's a first word representation, send it with the correct format: {(w1,decade) : count}
-                else if(words[0].equals("0")){
-                     //words = ['0',w1,decade,count]
-                    context.write(new Text(words[1] + " " + words[2]),new Text(words[3]));
+                else if (words[0].equals("0")) {
+                    //words = ['0',w1,decade,count]
+                    context.write(new Text(words[1] + " " + words[2]), new Text(words[3]));
                 }
                 //If it's a second word representation or a decade count, remain unchanged.
-                else{
+                else {
                     StringBuilder builder = new StringBuilder();
                     for (int i = 0; i < words.length - 1; i++) {
                         builder.append(words[i]);
@@ -49,64 +50,66 @@ public class Step2 {
         }
     }
 
-    public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
+    public static class ReducerClass extends Reducer<Text, Text, Text, Text> {
         DoubleWritable w1_count = new DoubleWritable();
+
         @Override
-        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             String[] keys = key.toString().split("\\s+");
-            //Check if we got a first word count row
-            if(keys.length == 2){
+            if (keys[0].equals("1") || keys.length == 1) {
+                context.write(key, values.iterator().next());
+            } else if (keys.length == 2) {
                 w1_count.set(Double.parseDouble(values.iterator().next().toString()));
+            } else {
+                writeBigram(keys, key, values, context);
             }
-            //Bi-gram case: calculate and subtract the appropriate values
-            else if(keys.length == 3 && !keys[0].equals("1")){
-                for (Text value : values) {
+        }
+
+        private void writeBigram(String[] keys, Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            for (Text value : values) {
 //                  arrays keys and valueSplit will contain:
 //                  keys=[w1,decade,'b']
 //                  valueSplit=[w2,count]
 //                  where the original bi-gram is 'w1 w2' and of amount count.
-                    String[] valueSplit = value.toString().split("\\s+");
-                    context.write(new Text(keys[0] + " " + valueSplit[0]+ " " + keys[1]),
-                            new Text(String.valueOf(Double.parseDouble(valueSplit[1]) - w1_count.get())));
-//                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2))-log(c(w1)))}
+                String[] valueSplit = value.toString().split("\\s+");
+                    Text newKey = new Text(keys[0] + " " + valueSplit[0] + " " + keys[1]);
+                    double numVal = calculateLog(Double.parseDouble(valueSplit[1]),w1_count.get());
+                    Text newVal = new Text(numVal +" "+ valueSplit[1]);
+                    context.write(newKey, newVal);
+//                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2))-log(c(w1)),c(w1w2))}
+            }
+        }
+        private double calculateLog(double cw1w2, double logCw1){
+            return Math.log(cw1w2) - logCw1;
+        }
+    }
+
+        //Partitioner that compare only the first two words of the key, unless its from the format: {(1 w2 decade):count} or {decade: count},
+        //in those formats the whole key will be considered
+        public static class PartitionerClass extends Partitioner<Text, Text> {
+            @Override
+            public int getPartition(Text key, Text value, int numPartitions) {
+                String[] words = key.toString().split("\\s+");
+                if (words[0].equals("1") || words.length == 1) {
+                    return key.hashCode() % numPartitions;
                 }
+                return ((words[0] + " " + words[1]).hashCode()) % numPartitions;
             }
-            //If we encounter a second word count row, or a decade count row, remain unchanged.
-            else{
-                context.write(key,values.iterator().next());
-            }
-
         }
-    }
 
-
-    //Partitioner that compare only the first two words of the key, unless its from the format: {(1 w2 decade):count} or {decade: count},
-    //in those formats the whole key will be considered
-    public static class PartitionerClass extends Partitioner<Text, Text> {
-        @Override
-        public int getPartition(Text key, Text value, int numPartitions) {
-            String[] words = key.toString().split("\\s+");
-            if(words[0].equals("1") || words.length == 1) {
-                return key.hashCode()%numPartitions;
-            }
-            return ((words[0]+" "+words[1]).hashCode()) % numPartitions;
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        System.out.println("[DEBUG] STEP 2 started!");
-        System.out.println(args.length > 0 ? args[0] : "no args");
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "2gram count");
-        job.setJarByClass(Step2.class);
-        job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(PartitionerClass.class);
-        job.setCombinerClass(ReducerClass.class);
-        job.setReducerClass(ReducerClass.class);
-        job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
+        public static void main(String[] args) throws Exception {
+            System.out.println("[DEBUG] STEP 2 started!");
+            System.out.println(args.length > 0 ? args[0] : "no args");
+            Configuration conf = new Configuration();
+            Job job = Job.getInstance(conf, "2gram count");
+            job.setJarByClass(Step2.class);
+            job.setMapperClass(MapperClass.class);
+            job.setPartitionerClass(PartitionerClass.class);
+            job.setReducerClass(ReducerClass.class);
+            job.setMapOutputKeyClass(Text.class);
+            job.setMapOutputValueClass(Text.class);
+            job.setOutputKeyClass(Text.class);
+            job.setOutputValueClass(Text.class);
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one
@@ -114,9 +117,9 @@ public class Step2 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
-    }
+            FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
+            FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
+            System.exit(job.waitForCompletion(true) ? 0 : 1);
+        }
 
-}
+    }

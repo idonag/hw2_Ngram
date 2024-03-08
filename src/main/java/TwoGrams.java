@@ -61,9 +61,15 @@ public class TwoGrams {
             for (Text value : values) {
                 sum += Double.parseDouble(value.toString());
             }
-            System.out.println("key: "+key.toString()+"sum: "+sum);
-            double log_sum = Math.log(sum);
-            context.write(key, new Text(String.valueOf(sum)));
+            double logSum = Math.log(sum);
+            String[] keys = key.toString().split("\\s+");
+            if(keys.length == 1 || !(keys[0].equals("0") || keys[0].equals("1"))){
+                context.write(key,new Text(String.valueOf(sum)));
+            }
+            else {
+                context.write(key, new Text(String.valueOf(logSum)));
+            }
+
         }
     }
 
@@ -82,7 +88,6 @@ public class TwoGrams {
         job.setJarByClass(TwoGrams.class);
         job.setMapperClass(MapperClass.class);
         job.setPartitionerClass(PartitionerClass.class);
-        job.setCombinerClass(ReducerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);

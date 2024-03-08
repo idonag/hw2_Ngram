@@ -69,7 +69,7 @@ public class App {
 
         StepConfig stepConfig3 = new StepConfig()
                 .withName("Step3")
-                .withHadoopJarStep(step2)
+                .withHadoopJarStep(step3)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
         //step4
         HadoopJarStepConfig step4 = new HadoopJarStepConfig()
@@ -77,7 +77,7 @@ public class App {
 
         StepConfig stepConfig4 = new StepConfig()
                 .withName("Step4")
-                .withHadoopJarStep(step2)
+                .withHadoopJarStep(step4)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
 
         //Job flow
@@ -94,7 +94,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1,stepConfig2,stepConfig3,stepConfig4)
+                .withSteps(stepConfig1,stepConfig2,stepConfig3/*,stepConfig4*/)
                 .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")
