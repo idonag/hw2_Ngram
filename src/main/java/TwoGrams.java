@@ -96,21 +96,26 @@ public class TwoGrams {
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
-                String[] splitWords = lineItr.nextToken().split("\\s+");
+                try {
+                    String[] splitWords = lineItr.nextToken().split("\\s+");
 
-                bigram.set(splitWords[0] + " " + splitWords[1]);
-                decade.set((Integer.parseInt(splitWords[2]) / 10) * 10);
-                count.set(Integer.parseInt(splitWords[3]));
+                    bigram.set(splitWords[0] + " " + splitWords[1]);
+                    decade.set((Integer.parseInt(splitWords[2]) / 10) * 10);
+                    count.set(Integer.parseInt(splitWords[3]));
 
-                if(isPotentialCalloc(bigram)) {
-                    bigramKey.set( decade.get() + " " + bigram.toString());
-                    context.write(bigramKey, new Text(count.toString()));
-                    String[] words = bigram.toString().split(" ");
-                    w1Key.set(decade.get() + " 0 " + words[0]);
-                    w2Key.set(decade.get() + " 1 " + words[0]);
-                    context.write(w1Key, new Text(count.toString()));
-                    context.write(w2Key, new Text(count.toString()));
-                    context.write(new Text(String.valueOf(decade.get())), new Text(count.toString()));
+                    if (isPotentialCalloc(bigram)) {
+                        bigramKey.set(decade.get() + " " + bigram.toString());
+                        context.write(bigramKey, new Text(count.toString()));
+                        String[] words = bigram.toString().split(" ");
+                        w1Key.set(decade.get() + " 0 " + words[0]);
+                        w2Key.set(decade.get() + " 1 " + words[1]);
+                        context.write(w1Key, new Text(count.toString()));
+                        context.write(w2Key, new Text(count.toString()));
+                        context.write(new Text(String.valueOf(decade.get())), new Text(count.toString()));
+                    }
+                }
+                catch (Exception e){
+                    System.out.printf("Error while parsing:%s%n",value);
                 }
             }
         }
@@ -132,6 +137,16 @@ public class TwoGrams {
                 context.write(key, new Text(String.valueOf(logSum)));
             }
 
+        }
+    }
+    public static class CombinerClass extends Reducer<Text,Text,Text,Text>{
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
+            double sum = 0;
+            for (Text value : values) {
+                sum += Double.parseDouble(value.toString());
+            }
+            context.write(key,new Text(String.valueOf(sum)));
         }
     }
 
@@ -157,6 +172,7 @@ public class TwoGrams {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+        job.setCombinerClass(CombinerClass.class);
         job.setNumReduceTasks(App.numOfReducers);
         System.out.println("job configured!");
 
@@ -167,7 +183,7 @@ public class TwoGrams {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/2gram_short.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/2gram/data"));
         FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }

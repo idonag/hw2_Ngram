@@ -24,7 +24,7 @@ public class Step5 {
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
                 //words = {dec,npmi,w1,w2}
-                context.write(new Text(words[0]+ " " + words[1] + " " + words[2] + words[3]), new Text(""));
+                context.write(new Text(words[0]+ " " + words[1] + " " + words[2] + " " + words[3]), new Text(""));
             }
         }
     }
@@ -52,8 +52,6 @@ public class Step5 {
         System.out.println("[DEBUG] STEP 5 started!");
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
-        conf.set("min_pmi",args[0]);
-        conf.set("rel_min_pmi",args[1]);
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step5.class);
         job.setMapperClass(MapperClass.class);

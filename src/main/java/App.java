@@ -16,7 +16,7 @@ import java.util.List;
 
 
 public class App {
-    public static int numOfReducers = 19;
+    public static int numOfReducers = 53;
     public static AWSCredentialsProvider credentialsProvider;
     public static AmazonS3 S3;
     public static AmazonEC2 ec2;
