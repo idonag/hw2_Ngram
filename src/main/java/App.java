@@ -16,14 +16,13 @@ import java.util.List;
 
 
 public class App {
+    public static int numOfReducers = 19;
     public static AWSCredentialsProvider credentialsProvider;
     public static AmazonS3 S3;
     public static AmazonEC2 ec2;
     public static AmazonElasticMapReduce emr;
 
-    public static int numberOfInstances = 1;
-    private static double minPmi;
-    private static double relMinPmi;
+    public static int numberOfInstances = 9;
 
     public static void main(String[]args){
 //        if(args.length != 2){
@@ -84,6 +83,14 @@ public class App {
                 .withName("Step4")
                 .withHadoopJarStep(step4)
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
+        //step5
+        HadoopJarStepConfig step5 = new HadoopJarStepConfig()
+                .withJar("s3://dsp-2gram2/step5.jar");
+
+        StepConfig stepConfig5 = new StepConfig()
+                .withName("Step5")
+                .withHadoopJarStep(step5)
+                .withActionOnFailure("TERMINATE_JOB_FLOW");
 
         //Job flow
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
@@ -99,7 +106,7 @@ public class App {
         RunJobFlowRequest runFlowRequest = new RunJobFlowRequest()
                 .withName("Map reduce project")
                 .withInstances(instances)
-                .withSteps(stepConfig1,stepConfig2,stepConfig3,stepConfig4)
+                .withSteps(stepConfig1,stepConfig2,stepConfig3,stepConfig4,stepConfig5)
                 .withLogUri("s3://dsp-2gram/logs/")
                 .withServiceRole("EMR_DefaultRole")
                 .withJobFlowRole("EMR_EC2_DefaultRole")

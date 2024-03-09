@@ -17,9 +17,6 @@ public class Step4 {
     public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         Text new_key = new Text();
         Text count = new Text();
-
-        //{w1,w2,dec}:log(c(w1w2))-log(c(w1))-log(c(w2)) -----> {dec,w1,w2}:{npmi}
-        //decade:N -----> NULL
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
@@ -28,8 +25,8 @@ public class Step4 {
 
                 //If words is a bi-gram, send it with the correct format: {(decade w1 w2):log(count),count}
                 if(words.length>2){
-                    //words = [w1,w2,decade,log(count),count]
-                    context.write(new Text(words[2] + " " + words[0] + " " + words[1]),new Text(words[3] + " " + words[4]));
+                    //words = [decade,w1,w2,log(count),count]
+                    context.write(new Text(words[0] + " " + words[1] + " " + words[2]),new Text(words[3] + " " + words[4]));
                 }
                 //If it's a decade count, remain the same {decade:count}
                 else{
@@ -83,14 +80,6 @@ public class Step4 {
     }
 
 
-    //Partitioner that compare only the first word of the key
-    public static class PartitionerClass extends Partitioner<Text, Text> {
-        @Override
-        public int getPartition(Text key, Text value, int numPartitions) {
-            String[] words = key.toString().split("\\s+");
-            return ((words[0]).hashCode()) % numPartitions;
-        }
-    }
 
     public static void main(String[] args) throws Exception {
         System.out.println("[DEBUG] STEP 4 started!");
@@ -101,12 +90,13 @@ public class Step4 {
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step4.class);
         job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(PartitionerClass.class);
+        job.setPartitionerClass(TwoGrams.PartitionerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+        job.setNumReduceTasks(App.numOfReducers);
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one

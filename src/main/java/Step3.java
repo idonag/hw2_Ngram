@@ -18,15 +18,15 @@ public class Step3 {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
-                //Second word case, write to context {(w2,decade):log(count)}
-                if(words[0].equals("1")){
-                    //words = ['1',w2,decade,log(count)]
-                    context.write(new Text(words[1] + " " + words[2]),new Text(words[3]));
+                //Second word case, write to context {(decade,w2):log(count)}
+                if(words[1].equals("1")){
+                    //words = [decade,'1',w2,log(count)]
+                    context.write(new Text(words[0] + " " + words[2]),new Text(words[3]));
                 }
-                //Bi-gram case, write to context {(w2,decade,'b'):(w1,log(count),count)}
+                //Bi-gram case, write to context {(decade,w2,'b'):(w1,log(count),count)}
                 else if(words.length>2){
-                    //words = [w1,w2,decade,log(count),count]
-                    context.write(new Text(words[1] + " " + words[2] + " " + "b"),new Text(words[0] + " " + words[3] + " " + words[4]));
+                    //words = [decade,w1,w2,log(count),count]
+                    context.write(new Text(words[0] + " " + words[2] + " " + "b"),new Text(words[1] + " " + words[3] + " " + words[4]));
                 }
                 //Decade case, write to context without change {decade:count}
                 else{
@@ -57,15 +57,15 @@ public class Step3 {
         private void writeBigram(String[] keys, Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             for (Text value : values) {
 //                  arrays keys and valueSplit will contain:
-//                  keys=[w2,decade,'b']
+//                  keys=[decade,w2,'b']
 //                  valueSplit=[w1,log(count),count]
 //                  where the original bi-gram is 'w1 w2' and of amount count.
                 String[] valueSplit = value.toString().split("\\s+");
-                Text newKey = new Text(valueSplit[0]+ " " + keys[0] + " "+ keys[1]);
+                Text newKey = new Text(keys[0]+ " " + valueSplit[0] + " "+ keys[1]);
                 double logCount = Double.parseDouble(valueSplit[1]) - w2_count.get();
                 Text newVal = new Text(logCount + " " + valueSplit[2]);
                 context.write(newKey, newVal);
-//                  It will send to the context - {(w1,w2,decade):(log(c(w1,w2)) - log(c(w1)) - log(c(w2)),count)}
+//                  It will send to the context - {(decade,w1,w2):(log(c(w1,w2)) - log(c(w1)) - log(c(w2)),count)}
             }
         }
     }
@@ -77,12 +77,13 @@ public class Step3 {
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step3.class);
         job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(Step2.PartitionerClass.class);
+        job.setPartitionerClass(TwoGrams.PartitionerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+        job.setNumReduceTasks(App.numOfReducers);
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one

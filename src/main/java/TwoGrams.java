@@ -96,28 +96,18 @@ public class TwoGrams {
         public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
-                StringTokenizer itr = new StringTokenizer(lineItr.nextToken(), "\t");
-                int i = 0;
-                while (itr.hasMoreTokens() && i < 3) {
-                    switch (i) {
-                        case 0:
-                            bigram.set(itr.nextToken());
-                            break;
-                        case 1:
-                            decade.set((Integer.parseInt(itr.nextToken()) /10) * 10);
-                            break;
-                        case 2:
-                            count.set(Integer.parseInt(itr.nextToken()));
-                            break;
-                    }
-                    i++;
-                }
+                String[] splitWords = lineItr.nextToken().split("\\s+");
+
+                bigram.set(splitWords[0] + " " + splitWords[1]);
+                decade.set((Integer.parseInt(splitWords[2]) / 10) * 10);
+                count.set(Integer.parseInt(splitWords[3]));
+
                 if(isPotentialCalloc(bigram)) {
-                    bigramKey.set(bigram.toString() + " " + decade.get());
+                    bigramKey.set( decade.get() + " " + bigram.toString());
                     context.write(bigramKey, new Text(count.toString()));
                     String[] words = bigram.toString().split(" ");
-                    w1Key.set("0 " + words[0] + " " + decade);
-                    w2Key.set("1 " + words[1] + " " + decade);
+                    w1Key.set(decade.get() + " 0 " + words[0]);
+                    w2Key.set(decade.get() + " 1 " + words[0]);
                     context.write(w1Key, new Text(count.toString()));
                     context.write(w2Key, new Text(count.toString()));
                     context.write(new Text(String.valueOf(decade.get())), new Text(count.toString()));
@@ -135,7 +125,7 @@ public class TwoGrams {
             }
             double logSum = Math.log(sum);
             String[] keys = key.toString().split("\\s+");
-            if(keys.length == 1 || !(keys[0].equals("0") || keys[0].equals("1"))){
+            if(keys.length == 1 || !(keys[1].equals("0") || keys[1].equals("1"))){
                 context.write(key,new Text(String.valueOf(sum)));
             }
             else {
@@ -145,10 +135,12 @@ public class TwoGrams {
         }
     }
 
-    public static class PartitionerClass extends Partitioner<Text, IntWritable> {
+    public static class PartitionerClass extends Partitioner<Text, Text> {
         @Override
-        public int getPartition(Text key, IntWritable value, int numPartitions) {
-            return key.hashCode() % numPartitions;
+        public int getPartition(Text key, Text value, int numPartitions) {
+            String[] words = key.toString().split("\\s+");
+            int int_key = Integer.parseInt(words[0]) / 10;
+            return int_key % numPartitions;
         }
     }
 
@@ -165,6 +157,7 @@ public class TwoGrams {
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
+        job.setNumReduceTasks(App.numOfReducers);
         System.out.println("job configured!");
 
 
