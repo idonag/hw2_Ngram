@@ -1,6 +1,5 @@
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -11,16 +10,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Partitioner;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.fs.Path;
-import com.amazonaws.auth.AWSCredentialsProvider;
 
 public class TwoGrams {
     public static String getObjectFromBucket(String key_name,String bucket_name){
@@ -31,7 +27,7 @@ public class TwoGrams {
             S3ObjectInputStream s3is = o.getObjectContent();
             FileOutputStream fos = new FileOutputStream(key_name);
             byte[] read_buf = new byte[1024];
-            int read_len = 0;
+            int read_len;
             while ((read_len = s3is.read(read_buf)) > 0) {
                 fos.write(read_buf, 0, read_len);
             }
@@ -63,11 +59,11 @@ public class TwoGrams {
     public static class MapperClass extends Mapper<LongWritable, Text, Text, Text> {
         private final static IntWritable count = new IntWritable();
         private final static IntWritable decade = new IntWritable();
-        private Set<String> stopWords;
-        private Text bigram = new Text();
-        private Text bigramKey = new Text();
-        private Text w1Key = new Text();
-        private Text w2Key = new Text();
+        private final Set<String> stopWords;
+        private final Text bigram = new Text();
+        private final Text bigramKey = new Text();
+        private final Text w1Key = new Text();
+        private final Text w2Key = new Text();
         public MapperClass(){
             super();
             this.stopWords = new HashSet<>();
@@ -93,7 +89,7 @@ public class TwoGrams {
             return !stopWords.contains(words[0]) && !stopWords.contains(words[1]);
         }
         @Override
-        public void map(LongWritable key, Text value, Context context) throws IOException,  InterruptedException {
+        public void map(LongWritable key, Text value, Context context){
             StringTokenizer lineItr = new StringTokenizer(value.toString(), "\n");
             while (lineItr.hasMoreTokens()) {
                 try {
@@ -104,7 +100,8 @@ public class TwoGrams {
                     count.set(Integer.parseInt(splitWords[3]));
 
                     if (isPotentialCalloc(bigram)) {
-                        bigramKey.set(decade.get() + " " + bigram.toString());
+                        bigram.set(bigram.toString().toLowerCase());
+                        bigramKey.set(decade.get() + " " + bigram);
                         context.write(bigramKey, new Text(count.toString()));
                         String[] words = bigram.toString().split(" ");
                         w1Key.set(decade.get() + " 0 " + words[0]);
