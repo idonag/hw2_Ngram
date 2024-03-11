@@ -76,8 +76,6 @@ public class App {
         //step4
         HadoopJarStepConfig step4 = new HadoopJarStepConfig()
                 .withJar("s3://dsp-2gram2/step4.jar");
-        List<String> step4_args = Arrays.asList(args[1], args[2]);
-        step4.setArgs(step4_args);
 
         StepConfig stepConfig4 = new StepConfig()
                 .withName("Step4")
@@ -86,6 +84,8 @@ public class App {
         //step5
         HadoopJarStepConfig step5 = new HadoopJarStepConfig()
                 .withJar("s3://dsp-2gram2/step5.jar");
+        List<String> step5_args = Arrays.asList(args[1], args[2]);
+        step5.setArgs(step5_args);
 
         StepConfig stepConfig5 = new StepConfig()
                 .withName("Step5")

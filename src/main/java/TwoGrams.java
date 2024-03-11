@@ -15,6 +15,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.fs.Path;
 
@@ -86,7 +87,7 @@ public class TwoGrams {
                 return false;
             if (!words[0].matches("[a-zA-Z]+") || !words[1].matches("[a-zA-Z]+"))
                 return false;
-            return !stopWords.contains(words[0]) && !stopWords.contains(words[1]);
+            return !stopWords.contains(words[0].toLowerCase()) && !stopWords.contains(words[1].toLowerCase());
         }
         @Override
         public void map(LongWritable key, Text value, Context context){
@@ -160,6 +161,7 @@ public class TwoGrams {
         System.out.println("[DEBUG] STEP 1 started!");
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
+        /*conf.set("mapred.max.split.size",)*/
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(TwoGrams.class);
         job.setMapperClass(MapperClass.class);
@@ -171,8 +173,8 @@ public class TwoGrams {
         job.setOutputValueClass(Text.class);
         job.setCombinerClass(CombinerClass.class);
         job.setNumReduceTasks(App.numOfReducers);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
         System.out.println("job configured!");
-
 
 //        For n_grams S3 files.
 //        Note: This is English version and you should change the path to the relevant one

@@ -23,10 +23,10 @@ public class Step4 {
             while (lineItr.hasMoreTokens()) {
                 String[] words = lineItr.nextToken().split("\\s+");
 
-                //If words is a bi-gram, send it with the correct format: {(decade w1 w2):log(count),count}
+                //If words is a bi-gram, send it with the correct format: {decade: w1,w2,log(count),count}
                 if(words.length>2){
                     //words = [decade,w1,w2,log(count),count]
-                    context.write(new Text(words[0] + " " + words[1] + " " + words[2]),new Text(words[3] + " " + words[4]));
+                    context.write(new Text(words[0]+ " b") , new Text(words[1] + " " + words[2]+  " " + words[3] + " " + words[4]));
                 }
                 //If it's a decade count, remain the same {decade:count}
                 else{
@@ -38,7 +38,6 @@ public class Step4 {
     }
 
     public static class ReducerClass extends Reducer<Text,Text,Text,Text> {
-
         DoubleWritable decade_count = new DoubleWritable();
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
@@ -49,26 +48,22 @@ public class Step4 {
             }
             //Bi-gram case: calculate and subtract the appropriate values
             else {
-                //keys = {dec,w1,w2}
-                //value = {log(count),count}
+                //keys = {dec,b}
+                //value = {w1,w2,log(count),count}
+                double npmi_sum = 0;
                 for(Text value : values){
                     String[] valueSplit = value.toString().split("\\s+");
                     double almostPmi = Double.parseDouble(valueSplit[0]);
                     double cw1w2 = Double.parseDouble(valueSplit[1]);
                     double npmi = calculateNpmi(decade_count.get(),cw1w2,almostPmi);
                     Text newKey = new Text(keys[0] + " " + npmi + " " + keys[1] + " " + keys[2]);
-                    if(isCollocation(npmi,context)){
-                        context.write(newKey,new Text(""));
-                    }
+                    context.write(newKey,new Text(""));
+                    npmi_sum += npmi;
                 }
+                context.write(new Text(keys[0]),new Text(String.valueOf(npmi_sum)));
                 //{dec,npmi,w1,w2}:""
+                //{dec:npmi_sum}
             }
-        }
-
-        private boolean isCollocation(double npmi,Context context) {
-            double min_pmi = Double.parseDouble(context.getConfiguration().get("min_pmi","1"));
-            double rel_min_pmi = Double.parseDouble(context.getConfiguration().get("rel_min_pmi","1"));
-            return npmi >= Math.max(min_pmi,rel_min_pmi);
         }
 
         private double calculateNpmi(double N, double countW1W2,double almostPmi){
@@ -85,8 +80,6 @@ public class Step4 {
         System.out.println("[DEBUG] STEP 4 started!");
         System.out.println(args.length > 0 ? args[0] : "no args");
         Configuration conf = new Configuration();
-        conf.set("min_pmi",args[0]);
-        conf.set("rel_min_pmi",args[1]);
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step4.class);
         job.setMapperClass(MapperClass.class);
