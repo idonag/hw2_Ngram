@@ -181,8 +181,8 @@ public class TwoGrams {
 //        job.setOutputFormatClass(TextOutputFormat.class);
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
-
-        FileInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/2gram/data"));
+// s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/2gram/data
+        FileInputFormat.addInputPath(job, new Path(""));
         FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
