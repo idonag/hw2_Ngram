@@ -3,13 +3,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.StringTokenizer;
 
 
@@ -53,10 +51,10 @@ public class Step4 {
                 double npmi_sum = 0;
                 for(Text value : values){
                     String[] valueSplit = value.toString().split("\\s+");
-                    double almostPmi = Double.parseDouble(valueSplit[0]);
-                    double cw1w2 = Double.parseDouble(valueSplit[1]);
+                    double almostPmi = Double.parseDouble(valueSplit[2]);
+                    double cw1w2 = Double.parseDouble(valueSplit[3]);
                     double npmi = calculateNpmi(decade_count.get(),cw1w2,almostPmi);
-                    Text newKey = new Text(keys[0] + " " + npmi + " " + keys[1] + " " + keys[2]);
+                    Text newKey = new Text(keys[0] + " " + npmi + " " + valueSplit[0] + " " + valueSplit[1]);
                     context.write(newKey,new Text(""));
                     npmi_sum += npmi;
                 }
@@ -69,6 +67,9 @@ public class Step4 {
         private double calculateNpmi(double N, double countW1W2,double almostPmi){
             double pmi = almostPmi + Math.log(N);
             double pw1w2 = countW1W2/N;
+            if(pw1w2 == 1){
+                return 1;
+            }
             double denom = -Math.log(pw1w2);
             return pmi/denom;
         }
@@ -83,7 +84,7 @@ public class Step4 {
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step4.class);
         job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(TwoGrams.PartitionerClass.class);
+        job.setPartitionerClass(Step1.PartitionerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
@@ -97,8 +98,8 @@ public class Step4 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_step3_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step4_2gram_count.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_step3_2gram_count.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step4_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 

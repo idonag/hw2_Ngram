@@ -11,6 +11,7 @@ import com.amazonaws.services.elasticmapreduce.model.*;
 
 import javax.xml.bind.annotation.XmlType;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class App {
 //        minPmi = Double.parseDouble(args[0]);
 //        relMinPmi = Double.parseDouble(args[0]);
 
-        credentialsProvider = new ProfileCredentialsProvider("C:\\Users\\idona\\.aws\\config.txt","default");
+        credentialsProvider = new ProfileCredentialsProvider("C:\\Users\\noams\\.aws\\config.txt","default");
         System.out.println("[INFO] Connecting to aws");
         ec2 = AmazonEC2ClientBuilder.standard()
                 .withCredentials(credentialsProvider)
@@ -50,7 +51,9 @@ public class App {
 
         // Step 1
         HadoopJarStepConfig step1 = new HadoopJarStepConfig()
-                .withJar("s3://dsp-2gram2/2gram.jar");
+                .withJar("s3://dsp-2gram/step1.jar");
+        List<String> step1_args = Collections.singletonList(args[3]);
+        step1.setArgs(step1_args);
 
         StepConfig stepConfig1 = new StepConfig()
                 .withName("Step1")
@@ -59,7 +62,7 @@ public class App {
 
         //step2
         HadoopJarStepConfig step2 = new HadoopJarStepConfig()
-                .withJar("s3://dsp-2gram2/step2.jar");
+                .withJar("s3://dsp-2gram/step2.jar");
 
         StepConfig stepConfig2 = new StepConfig()
                 .withName("Step2")
@@ -67,7 +70,7 @@ public class App {
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
         //step3
         HadoopJarStepConfig step3 = new HadoopJarStepConfig()
-                .withJar("s3://dsp-2gram2/step3.jar");
+                .withJar("s3://dsp-2gram/step3.jar");
 
         StepConfig stepConfig3 = new StepConfig()
                 .withName("Step3")
@@ -75,7 +78,7 @@ public class App {
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
         //step4
         HadoopJarStepConfig step4 = new HadoopJarStepConfig()
-                .withJar("s3://dsp-2gram2/step4.jar");
+                .withJar("s3://dsp-2gram/step4.jar");
 
         StepConfig stepConfig4 = new StepConfig()
                 .withName("Step4")
@@ -83,7 +86,7 @@ public class App {
                 .withActionOnFailure("TERMINATE_JOB_FLOW");
         //step5
         HadoopJarStepConfig step5 = new HadoopJarStepConfig()
-                .withJar("s3://dsp-2gram2/step5.jar");
+                .withJar("s3://dsp-2gram/step5.jar");
         List<String> step5_args = Arrays.asList(args[1], args[2]);
         step5.setArgs(step5_args);
 
@@ -95,8 +98,8 @@ public class App {
         //Job flow
         JobFlowInstancesConfig instances = new JobFlowInstancesConfig()
                 .withInstanceCount(numberOfInstances)
-                .withMasterInstanceType(InstanceType.M4Large.toString())
-                .withSlaveInstanceType(InstanceType.M4Large.toString())
+                .withMasterInstanceType(InstanceType.M4Xlarge.toString())
+                .withSlaveInstanceType(InstanceType.M4Xlarge.toString())
                 .withHadoopVersion("2.9.2")
                 .withEc2KeyName("vockey")
                 .withKeepJobFlowAliveWhenNoSteps(false)
