@@ -22,7 +22,7 @@ public class Step5 {
                 String[] words = lineItr.nextToken().split("\\s+");
                 if(words.length == 2){
                     //words = {dec,npmi_count}
-                    context.write(new Text(words[0]),new Text(words[1]));
+                    context.write(new Text(words[0] + " b "),new Text(words[1]));
                 }
                 else{
                 //words = {dec,npmi,w1,w2}
@@ -39,8 +39,9 @@ public class Step5 {
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException,  InterruptedException {
             String[] keySplit = key.toString().split("\\s+");
-            if(keySplit.length == 1){
+            if(keySplit[1].equals("b")){
                 npmi_sum.set(Double.parseDouble(values.iterator().next().toString()));
+                context.write(new Text("sum of npmis: "),new Text(String.valueOf(npmi_sum.get())));
             }
             else {
                 for (Text value : values) {

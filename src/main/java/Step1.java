@@ -187,7 +187,7 @@ public class Step1 {
         isEnglish = args[0].equals("E");
         System.out.println("is english:\t" + isEnglish);
         conf.set("isEnglish",args[0]);
-        /*conf.set("mapred.max.split.size",)*/
+        conf.set("mapred.max.split.size","33554432");
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step1.class);
         job.setMapperClass(MapperClass.class);
