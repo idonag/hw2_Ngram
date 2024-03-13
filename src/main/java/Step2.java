@@ -3,13 +3,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.StringTokenizer;
 
 
@@ -92,7 +90,7 @@ public class Step2 {
             Job job = Job.getInstance(conf, "2gram count");
             job.setJarByClass(Step2.class);
             job.setMapperClass(MapperClass.class);
-            job.setPartitionerClass(TwoGrams.PartitionerClass.class);
+            job.setPartitionerClass(Step1.PartitionerClass.class);
             job.setReducerClass(ReducerClass.class);
             job.setMapOutputKeyClass(Text.class);
             job.setMapOutputValueClass(Text.class);
@@ -106,8 +104,8 @@ public class Step2 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-            FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_2gram_count.txt"));
-            FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
+            FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_step1_2gram_count.txt"));
+            FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step2_2gram_count.txt"));
             System.exit(job.waitForCompletion(true) ? 0 : 1);
         }
 

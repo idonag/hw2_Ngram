@@ -77,7 +77,7 @@ public class Step3 {
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step3.class);
         job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(TwoGrams.PartitionerClass.class);
+        job.setPartitionerClass(Step1.PartitionerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
@@ -90,9 +90,9 @@ public class Step3 {
 //        job.setOutputFormatClass(TextOutputFormat.class);
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
-///TODO change the file path for input and output!!!!!!!!!!
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_step2_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step3_2gram_count.txt"));
+
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_step2_2gram_count.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step3_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
     // {1,w2,dec}:log(count) -----> NULL

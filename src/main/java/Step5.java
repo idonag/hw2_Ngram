@@ -3,7 +3,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -47,7 +46,8 @@ public class Step5 {
                 for (Text value : values) {
                     if(isCollocation(Double.parseDouble(keySplit[1]),context)) {
                         Text newKey = new Text(keySplit[0]+" "+value);
-                        Text newVal = new Text(keySplit[1]);
+                        double fixed_npmi = Math.min(1,Double.parseDouble(keySplit[1]));
+                        Text newVal = new Text(String.valueOf(fixed_npmi));
                         context.write(newKey, newVal);
                     }
                 }
@@ -78,7 +78,7 @@ public class Step5 {
         Job job = Job.getInstance(conf, "2gram count");
         job.setJarByClass(Step5.class);
         job.setMapperClass(MapperClass.class);
-        job.setPartitionerClass(TwoGrams.PartitionerClass.class);
+        job.setPartitionerClass(Step1.PartitionerClass.class);
         job.setReducerClass(ReducerClass.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
@@ -93,8 +93,8 @@ public class Step5 {
 //        job.setInputFormatClass(SequenceFileInputFormat.class);
 //        TextInputFormat.addInputPath(job, new Path("s3://datasets.elasticmapreduce/ngrams/books/20090715/eng-us-all/3gram/data"));
 
-        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram2/output_step4_2gram_count.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram2/output_step5_2gram_count.txt"));
+        FileInputFormat.addInputPath(job, new Path("s3://dsp-2gram/output_step4_2gram_count.txt"));
+        FileOutputFormat.setOutputPath(job, new Path("s3://dsp-2gram/output_step5_2gram_count.txt"));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 
